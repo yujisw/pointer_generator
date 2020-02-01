@@ -1,0 +1,47 @@
+version: "2.3"
+
+services:
+  jupyter_pytorch_1_3_1_cpu:
+    build: jupyter_pytorch_1_3_1_cpu
+    volumes:
+      - ./:/shared
+    ports:
+      - 8888:8888
+    working_dir: /shared/notebook
+    command: jupyter lab --ip=0.0.0.0 --allow-root --NotebookApp.token=''
+  train_pytorch_1_3_1_cpu:
+    build: train_pytorch_1_3_1_cpu
+    volumes:
+      - ./:/shared
+    working_dir: /shared/train_pytorch_1_3_1_cpu
+    depends_on:
+      - logger
+    command: python demo.py
+  train_keras_2_2_4_cpu:
+    build: train_keras_2_2_4_cpu
+    volumes:
+      - ./:/shared
+    working_dir: /shared/train_keras_2_2_4_cpu
+    depends_on: 
+      - logger
+    command: python train.py
+  train_keras_2_2_4_gpu:
+    build: train_keras_2_2_4_gpu
+    runtime: nvidia
+    environment:
+      - VIDIA_DRIVER_CAPABILITIES=compute,utility
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./:/shared
+    working_dir: /shared/train_keras_2_2_4_cpu
+    command: python train.py
+  logger:
+    build: ./logger
+    ports:
+      - 6006:6006 # for tensorboard
+      - 16006:9000 # for omniboard
+    volumes:
+      - ./logger/mongo:/data/db
+      - ./:/shared
+    working_dir: /shared/logger
+    command: /bin/sh -c "mongod --bind_ip 0.0.0.0 & omniboard -m 0.0.0.0:27017:train_log & tensorboard --logdir=tensorboard_logs --host=0.0.0.0"
